@@ -42,7 +42,7 @@ import TodayRecordList from './src/components/TodayRecordList';
 import LogsScreen from './src/components/LogsScreen';
 
 /* ===============================
-   🔽 バナー（ステータスバー対応）
+   🔽 バナー
 =============================== */
 const HeaderBanner = () => {
   const insets = useSafeAreaInsets();
@@ -52,7 +52,7 @@ const HeaderBanner = () => {
       style={[
         styles.banner,
         {
-          paddingTop: insets.top > 0 ? insets.top : 30
+          paddingTop: insets.top, // ←これだけでOK
         }
       ]}
     >
@@ -163,99 +163,96 @@ function App() {
   }
 
   /* ===============================
-     UI（ここが今回の核心）
+     UI
   =============================== */
   return (
-    <>
-      {/* ★ ステータスバーを透過 */}
-      <StatusBar style="light" translucent />
+    <SafeAreaView style={styles.safeArea}>
 
-      {/* ★ SafeArea外に出す */}
+      {/* ★ translucent削除（これ重要） */}
+      <StatusBar style="dark" />
+
+      {/* ★ SafeArea内に入れる */}
       <HeaderBanner />
 
-      {/* ★ 下だけ守る */}
-      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
 
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: 16 }}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
         >
 
-          <ScrollView
-            contentContainerStyle={{ paddingBottom: 16 }}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag"
-          >
+          <DutySearchBar
+            uuid={uuid}
+            dutyDate={dutyDate}
+            dutyType={dutyType}
+            jumpText={jumpText}
+            baseDate={baseDate}
+            pattern={pattern}
+            onChange={(newDate, jumpType) => {
+              setDutyDate(newDate);
+              refreshAll();
+              if (jumpType === 'long-next') showJump('＋30');
+              if (jumpType === 'long-prev') showJump('－30');
+            }}
+            onSavePattern={async (newBaseDate, newPattern) => {
+              await saveCycleSettings(uuid, newBaseDate, newPattern, 'cycle');
+              setPattern(newPattern);
+              setBaseDate(newBaseDate);
+            }}
+            onSetOverride={handleOverride}
+            onResetOverride={handleResetOverride}
+          />
 
-            <DutySearchBar
-              uuid={uuid}
-              dutyDate={dutyDate}
-              dutyType={dutyType}
-              jumpText={jumpText}
-              baseDate={baseDate}
-              pattern={pattern}
-              onChange={(newDate, jumpType) => {
-                setDutyDate(newDate);
-                refreshAll();
-                if (jumpType === 'long-next') showJump('＋30');
-                if (jumpType === 'long-prev') showJump('－30');
-              }}
-              onSavePattern={async (newBaseDate, newPattern) => {
-                await saveCycleSettings(uuid, newBaseDate, newPattern, 'cycle');
-                setPattern(newPattern);
-                setBaseDate(newBaseDate);
-              }}
-              onSetOverride={handleOverride}
-              onResetOverride={handleResetOverride}
-            />
+          <DailyMemo uuid={uuid} dutyDate={dutyDate} />
 
-            <DailyMemo uuid={uuid} dutyDate={dutyDate} />
+          <TodayTotal
+            uuid={uuid}
+            dutyDate={dutyDate}
+            refreshKey={refreshKey}
+            onRefresh={refreshAll}
+          />
 
-            <TodayTotal
-              uuid={uuid}
-              dutyDate={dutyDate}
-              refreshKey={refreshKey}
-              onRefresh={refreshAll}
-            />
+          <RecordInputForm
+            uuid={uuid}
+            dutyDate={dutyDate}
+            onSaved={refreshAll}
+          />
 
-            <RecordInputForm
-              uuid={uuid}
-              dutyDate={dutyDate}
-              onSaved={refreshAll}
-            />
+          <MealInputButtons
+            uuid={uuid}
+            dutyDate={dutyDate}
+            onMealRefresh={refreshAll}
+          />
 
-            <MealInputButtons
-              uuid={uuid}
-              dutyDate={dutyDate}
-              onMealRefresh={refreshAll}
-            />
+          <DailyMealSummary
+            uuid={uuid}
+            dutyDate={dutyDate}
+            refreshKey={refreshKey}
+          />
 
-            <DailyMealSummary
-              uuid={uuid}
-              dutyDate={dutyDate}
-              refreshKey={refreshKey}
-            />
+          <TodayTimeline
+            uuid={uuid}
+            dutyDate={dutyDate}
+            refreshKey={refreshKey}
+          />
 
-            <TodayTimeline
-              uuid={uuid}
-              dutyDate={dutyDate}
-              refreshKey={refreshKey}
-            />
+          <TodayRecordList
+            uuid={uuid}
+            dutyDate={dutyDate}
+            refreshKey={refreshKey}
+          />
 
-            <TodayRecordList
-              uuid={uuid}
-              dutyDate={dutyDate}
-              refreshKey={refreshKey}
-            />
+          {DEBUG && <LogsScreen />}
 
-            {DEBUG && <LogsScreen />}
+        </ScrollView>
 
-          </ScrollView>
+      </KeyboardAvoidingView>
 
-        </KeyboardAvoidingView>
-
-      </SafeAreaView>
-    </>
+    </SafeAreaView>
   );
 }
 
