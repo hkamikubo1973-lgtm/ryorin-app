@@ -1,0 +1,54 @@
+{
+  "expo": {
+    "name": "RYORIN",
+    "slug": "ryorin-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+
+    "ios": {
+      "supportsTablet": true
+    },
+
+    "android": {
+      "package": "com.anonymous.mealappv2",
+
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+
+      "edgeToEdgeEnabled": false,
+      "predictiveBackGestureEnabled": false,
+
+      "statusBar": {
+        "translucent": true,
+        "backgroundColor": "#00000000",
+        "barStyle": "light-content"
+      }
+    },
+
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+
+    "plugins": [
+      "expo-sqlite",
+      "@react-native-community/datetimepicker"
+    ],
+
+    "extra": {
+      "eas": {
+        "projectId": "bdf6ad38-8fb6-4140-9052-a64080122603"
+      }
+    }
+  }
+}
