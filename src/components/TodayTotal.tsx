@@ -20,6 +20,9 @@ import {
   resetDailySalesByDutyDate,
 } from '../database/database'
 
+import { getSalaryConfig, saveSalaryConfig } from '../database/salaryConfig'
+import { calculateExpectedSalary } from '../utils/salaryCalculator'
+
 import { ActionCard } from './ActionCard'
 import { getTodayActionCard } from '../utils/getTodayActionCard'
 
@@ -71,6 +74,10 @@ export default function TodayTotal({
 
   const [open, setOpen] = useState(false)
 
+  // ★給与
+  const [salaryConfig, setSalaryConfig] = useState<any>(null)
+  const [expectedSalary, setExpectedSalary] = useState<number>(0)
+
   /* =====================
      曜日取得
   ===================== */
@@ -111,16 +118,44 @@ export default function TodayTotal({
       const card = await getTodayActionCard({ uuid, dutyDate } as any)
       setActionCard(card)
 
+      // ★給与設定取得
+      let config = await getSalaryConfig(uuid)
+
+      if (!config) {
+        await saveSalaryConfig(uuid, {
+          monthly_threshold: 360000,
+          target_days: 12,
+          low_rate: 0.5,
+          high_rate: 0.6
+        })
+        config = await getSalaryConfig(uuid)
+      }
+
+      setSalaryConfig(config)
+
     } catch (e) {
-
       console.log('LOAD ERROR:', e)
-
     }
   }
 
   useEffect(() => {
     load()
   }, [uuid, dutyDate, refreshKey])
+
+  /* =====================
+     ★給与計算（正規設計）
+  ===================== */
+
+  useEffect(() => {
+
+    if (salaryConfig) {
+      const result = calculateExpectedSalary(todayTotal, salaryConfig)
+      setExpectedSalary(result)
+    } else {
+      setExpectedSalary(0)
+    }
+
+  }, [salaryConfig, todayTotal])
 
   const remaining = monthlyTarget - monthTotal
 
@@ -161,9 +196,7 @@ export default function TodayTotal({
   const handleWeatherSelect = async (w: WeatherType) => {
 
     await updateWeatherByDutyDate(uuid, dutyDate, w)
-
     setWeather(w)
-
     onRefresh()
   }
 
@@ -184,7 +217,6 @@ export default function TodayTotal({
           onPress: async () => {
 
             await resetDailySalesByDutyDate(uuid, dutyDate)
-
             onRefresh()
 
           },
@@ -220,7 +252,6 @@ export default function TodayTotal({
         {targetOpen && (
           <View style={styles.optionBox}>
             {TARGET_OPTIONS.map(v => (
-
               <Pressable
                 key={v}
                 onPress={() => handleTargetChange(v)}
@@ -235,7 +266,6 @@ export default function TodayTotal({
                   {v.toLocaleString()} 円
                 </Text>
               </Pressable>
-
             ))}
           </View>
         )}
@@ -253,7 +283,6 @@ export default function TodayTotal({
         {closingOpen && (
           <View style={styles.optionBox}>
             {CLOSING_OPTIONS.map(day => (
-
               <Pressable
                 key={day}
                 onPress={() => handleClosingChange(day)}
@@ -268,7 +297,6 @@ export default function TodayTotal({
                   {day === 31 ? '月末' : `${day}日`}
                 </Text>
               </Pressable>
-
             ))}
           </View>
         )}
@@ -305,9 +333,7 @@ export default function TodayTotal({
         </Text>
 
         <View style={styles.weatherRow}>
-
           {WEATHER_LIST.map(w => (
-
             <Pressable
               key={w}
               onPress={() => handleWeatherSelect(w)}
@@ -318,9 +344,7 @@ export default function TodayTotal({
             >
               <Text>{w}</Text>
             </Pressable>
-
           ))}
-
         </View>
 
         <Pressable
@@ -328,7 +352,7 @@ export default function TodayTotal({
           onPress={() => setOpen(v => !v)}
         >
           <Text style={commonStyles.accordionText}>
-          {open ? '▲ 詳細・売上リセットを閉じる' : '▼ 詳細・売上リセット'}
+            {open ? '▲ 詳細・売上リセットを閉じる' : '▼ 詳細・売上リセット'}
           </Text>
         </Pressable>
 
@@ -339,6 +363,15 @@ export default function TodayTotal({
             <Text>通常：{summary.normal?.toLocaleString()} 円</Text>
             <Text>貸切：{summary.charter?.toLocaleString()} 円</Text>
             <Text>その他：{summary.other?.toLocaleString()} 円</Text>
+
+            {/* ★給与表示 */}
+            {salaryConfig && (
+              <View style={styles.salaryBox}>
+                <Text style={styles.salaryText}>
+                  手取り見込（概算） ¥{expectedSalary.toFixed(0)}
+                </Text>
+              </View>
+            )}
 
             <Pressable style={styles.reset} onPress={handleReset}>
               <Text style={styles.resetText}>
@@ -361,94 +394,38 @@ export default function TodayTotal({
 ===================== */
 
 const styles = StyleSheet.create({
-
-  selectorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 6,
-  },
-
-  selectorLabel: {
-    fontSize: 12,
-    color: '#666',
-  },
-
-  selectorValue: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#1976D2',
-  },
-
-  optionBox: {
-    marginTop: 4,
-  },
-
-  optionItem: {
-    paddingVertical: 4,
-  },
-
-  optionText: {
-    fontSize: 12,
-    color: '#555',
-  },
-
-  optionSelected: {
-    color: '#1976D2',
-    fontWeight: '600',
-  },
-
-  sub: {
-    fontSize: 12,
-    color: '#666',
-  },
-
-  amount: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginVertical: 4,
-  },
-
-  remaining: {
-    fontSize: 14,
-    color: '#1976D2',
-    fontWeight: '600',
-  },
-
-  remainingOk: {
-    color: '#2E7D32',
-  },
-
-  toggle: {
-    fontSize: 12,
-    color: '#555',
-    marginTop: 6,
-  },
-
-  detail: {
-    marginTop: 6,
-  },
-
-  weatherRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 6,
-  },
-
+  selectorRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
+  selectorLabel: { fontSize: 12, color: '#666' },
+  selectorValue: { fontSize: 18, fontWeight: '800', color: '#1976D2' },
+  optionBox: { marginTop: 4 },
+  optionItem: { paddingVertical: 4 },
+  optionText: { fontSize: 12, color: '#555' },
+  optionSelected: { color: '#1976D2', fontWeight: '600' },
+  sub: { fontSize: 12, color: '#666' },
+  amount: { fontSize: 22, fontWeight: 'bold', marginVertical: 4 },
+  remaining: { fontSize: 14, color: '#1976D2', fontWeight: '600' },
+  remainingOk: { color: '#2E7D32' },
+  detail: { marginTop: 6 },
+  weatherRow: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 6 },
   weatherButton: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    marginRight: 6,
-    marginBottom: 6,
+    borderWidth: 1, borderColor: '#ccc', borderRadius: 6,
+    paddingHorizontal: 8, paddingVertical: 4,
+    marginRight: 6, marginBottom: 6,
   },
-
   weatherSelected: {
     backgroundColor: '#E3F2FD',
     borderColor: '#1976D2',
   },
-
+  salaryBox: {
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderColor: '#eee',
+  },
+  salaryText: {
+    fontSize: 13,
+    color: '#666',
+  },
   reset: {
     marginTop: 10,
     padding: 10,
@@ -457,11 +434,9 @@ const styles = StyleSheet.create({
     borderColor: '#E57373',
     backgroundColor: '#FDECEA',
   },
-
   resetText: {
     color: '#C62828',
     fontWeight: '600',
     textAlign: 'center',
   },
-
 })

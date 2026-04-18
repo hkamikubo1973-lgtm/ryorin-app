@@ -461,4 +461,17 @@ export const initDatabase = async () => {
       PRIMARY KEY (uuid, duty_date, time_zone, slot_index)
     );
   `);
+
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS salary_config (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      uuid TEXT UNIQUE,
+      monthly_threshold INTEGER,
+      target_days INTEGER,
+      low_rate REAL,
+      high_rate REAL,
+      created_at TEXT,
+      updated_at TEXT
+    );
+  `);
   };
