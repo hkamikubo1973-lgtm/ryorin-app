@@ -4,7 +4,6 @@ import {
   Text,
   Pressable,
   StyleSheet,
-  TextInput,
   Alert,
   TouchableOpacity,
 } from 'react-native';
@@ -13,6 +12,10 @@ import { DutyType } from '../types/DutyType';
 import { commonStyles } from '../styles/common';
 import { insertLog } from '../database/logs';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { DUTY_LABEL } from '../constants/dutyLabel';
+import { DUTY_COLOR } from '../constants/dutyColor';
+import { DUTY_ORDER } from '../constants/dutyOrder';
+import { resolveDuty } from '../utils/resolveDuty';
 
 const getNewDate = (dateStr: string, diff: number) => {
   const d = new Date(dateStr);
@@ -55,26 +58,14 @@ export default function DutySearchBar({
 
   const [openCycle, setOpenCycle] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const finalDuty = resolveDuty(dutyType, null);
   const [localBaseDate, setLocalBaseDate] = useState(baseDate ?? '');
   const [saving, setSaving] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [localPattern, setLocalPattern] = useState<DutyType[]>(
     pattern ?? ['work', 'ake', 'off']
   );
-  const getDutyColor = (type: DutyType) => {
-  switch (type) {
-    case 'work': return '#1976D2';
-    case 'ake': return '#FF9800';
-    case 'off': return '#9E9E9E';
-    case 'paid': return '#4CAF50';
-    case 'absence': return '#F44336';
-    case 'late': return '#E91E63';
-    case 'leaveEarly': return '#9C27B0';
-    case 'cancel': return '#607D8B';
-    default: return '#333';
-  }
-};
-
+  
   useEffect(() => {
 
      if (!pattern) {
@@ -88,21 +79,13 @@ export default function DutySearchBar({
 
   useEffect(() => setLocalBaseDate(baseDate ?? ''), [baseDate]);
 
-  const DUTY_LABEL: Record<DutyType, string> = {
-    work: '乗務',
-    ake: '明け',
-    off: '公休',
-    paid: '有休',
-    absence: '欠勤',
-    late: '遅刻',
-    leaveEarly: '早退',
-    cancel: '取消',
-  };
-
   const nextDuty = (type: DutyType): DutyType => {
-    const order: DutyType[] = ['work', 'ake', 'off'];
-    const idx = order.indexOf(type);
-    return order[(idx + 1) % order.length];
+    const baseCycle = DUTY_ORDER.filter(t =>
+      ['work','ake','off'].includes(t)
+    );
+
+    const idx = baseCycle.indexOf(type);
+    return baseCycle[(idx + 1) % baseCycle.length];
   };
 
   const cycleInfo = React.useMemo(() => {
@@ -210,17 +193,17 @@ export default function DutySearchBar({
         <View style={styles.center}>
          <Text style={styles.date}>{dutyDate}</Text>
 
-         <Text
-           style={[
-             commonStyles.text,
-             dutyType && {
-               color: getDutyColor(dutyType),
-               fontWeight: 'bold'
-             }
-           ]}
-         >
-           {dutyType && DUTY_LABEL[dutyType]}
-         </Text>
+        <Text
+          style={[
+            commonStyles.text,
+            finalDuty && {
+              color: DUTY_COLOR[finalDuty],
+              fontWeight: 'bold'
+            }
+          ]}
+        >
+          {finalDuty && DUTY_LABEL[finalDuty]}
+        </Text>
        </View>
 
         <Pressable
@@ -263,8 +246,7 @@ export default function DutySearchBar({
           <Text style={commonStyles.section}>勤務修正</Text>
 
           <View style={styles.overrideRow}>
-            {(['work','off','paid','absence','late','leaveEarly'] as DutyType[])
-            .map((type) => (
+            {DUTY_ORDER.map((type) => (
               <Pressable
                 key={type}
                 style={commonStyles.chip}

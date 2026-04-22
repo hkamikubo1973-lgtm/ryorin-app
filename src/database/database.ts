@@ -153,8 +153,15 @@ export const getTodayTotalSales = async (
 
 
 /* =========================
-   月売上
+   月売上（締日バグ完全修正）
 ========================= */
+
+const toLocalDateString = (d: Date) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
 
 export const getMonthlyTotalSales = async (
   uuid: string,
@@ -167,19 +174,28 @@ export const getMonthlyTotalSales = async (
   const base = new Date(dutyDate);
   const year = base.getFullYear();
   const month = base.getMonth();
+  const day = base.getDate();
 
-  const start =
-  base.getDate() > closingDay
-    ? new Date(year, month, closingDay + 1)
-    : new Date(year, month - 1, closingDay + 1);
+  let start: Date;
+  let end: Date;
 
-const end =
-  base.getDate() > closingDay
-    ? new Date(year, month + 1, closingDay)
-    : new Date(year, month, closingDay);
+  if (closingDay === 31) {
+    // ★月末締め（完全対応）
+    start = new Date(year, month, 1);
+    end = new Date(year, month + 1, 0);
+  } else {
+    if (day > closingDay) {
+      start = new Date(year, month, closingDay + 1);
+      end = new Date(year, month + 1, closingDay);
+    } else {
+      start = new Date(year, month - 1, closingDay + 1);
+      end = new Date(year, month, closingDay);
+    }
+  }
 
-  const startStr = start.toISOString().slice(0, 10);
-  const endStr = end.toISOString().slice(0, 10);
+  // ★ここ重要（UTCバグ回避）
+  const startStr = toLocalDateString(start);
+  const endStr = toLocalDateString(end);
 
   const row = await database.getFirstAsync<{ total: number }>(
     `
