@@ -21,8 +21,7 @@ import {
 } from '../database/database'
 
 import { getSalaryConfig, saveSalaryConfig } from '../database/salaryConfig'
-import { calculateExpectedSalary } from '../utils/salaryCalculator'
-
+import { calculateDailySalary } from '../utils/salaryCalculator';
 import { ActionCard } from './ActionCard'
 import { getTodayActionCard } from '../utils/getTodayActionCard'
 
@@ -76,8 +75,7 @@ export default function TodayTotal({
 
   // ★給与
   const [salaryConfig, setSalaryConfig] = useState<any>(null)
-  const [expectedSalary, setExpectedSalary] = useState<number>(0)
-
+  
   /* =====================
      曜日取得
   ===================== */
@@ -142,22 +140,13 @@ export default function TodayTotal({
     load()
   }, [uuid, dutyDate, refreshKey])
 
-  /* =====================
-     ★給与計算（正規設計）
-  ===================== */
-
-  useEffect(() => {
-
-    if (salaryConfig) {
-      const result = calculateExpectedSalary(todayTotal, salaryConfig)
-      setExpectedSalary(result)
-    } else {
-      setExpectedSalary(0)
-    }
-
-  }, [salaryConfig, todayTotal])
-
+  
   const remaining = monthlyTarget - monthTotal
+
+  // ★日次給与
+  const dailySalary = salaryConfig
+    ? calculateDailySalary(todayTotal, salaryConfig)
+    : 0
 
   /* =====================
      目標変更
@@ -331,7 +320,7 @@ export default function TodayTotal({
         <Text style={styles.amount}>
           {todayTotal.toLocaleString()} 円
         </Text>
-
+        
         <View style={styles.weatherRow}>
           {WEATHER_LIST.map(w => (
             <Pressable
@@ -364,15 +353,13 @@ export default function TodayTotal({
             <Text>貸切：{summary.charter?.toLocaleString()} 円</Text>
             <Text>その他：{summary.other?.toLocaleString()} 円</Text>
 
-            {/* ★給与表示 */}
-            {salaryConfig && (
-              <View style={styles.salaryBox}>
-                <Text style={styles.salaryText}>
-                  手取り見込（概算） ¥{expectedSalary.toFixed(0)}
-                </Text>
-              </View>
-            )}
-
+          <View style={{ marginTop: 8, borderTopWidth: 1.5, borderColor: '#ccc', paddingTop: 8 }}>
+            <Text style={styles.salaryText}>日次給与（目安）</Text>
+            <Text style={styles.amount}>
+              {dailySalary.toLocaleString()} 円
+            </Text>
+          </View>
+            
             <Pressable style={styles.reset} onPress={handleReset}>
               <Text style={styles.resetText}>
                 本日の売上をリセット
