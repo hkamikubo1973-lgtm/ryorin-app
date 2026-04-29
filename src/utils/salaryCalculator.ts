@@ -1,39 +1,28 @@
-import { SalaryConfig } from '../types/SalaryConfig';
+export const calculateDailySalary = (sales: number, config: any) => {
+  const total = Number(sales) || 0
 
-type DailySales = {
-  normal: number;
-  charter: number;
-  other: number;
-};
+  const lowRate = Number(config.low_rate) || 0
+  const highRate = Number(config.high_rate) || 0
+  const threshold = Number(config.monthly_threshold) || 0
 
-export const calculateDailySalary = (
-  sales: DailySales,
-  config: SalaryConfig
-): number => {
-
-  const total =
-    (sales.normal || 0) +
-    (sales.charter || 0) +
-    (sales.other || 0);
-
-  // 歩合計算
-  let salary = total * (config.rate / 100);
-
-  // 調整給加算
-  salary += config.adjustment || 0;
-
-  // 下限保証（あれば）
-  if (config.minimum && salary < config.minimum) {
-    salary = config.minimum;
+  if (total >= threshold) {
+    return Math.floor(total * highRate)
   }
 
-  return Math.floor(salary);
-};
+  return Math.floor(total * lowRate)
+}
 
-// 月額（概算）
-export const calculateMonthlySalary = (
-  dailySalary: number,
-  workingDays: number
-): number => {
-  return Math.floor(dailySalary * workingDays);
-};
+
+export const calculateMonthlySalary = (sales: number, config: any) => {
+  const total = Number(sales) || 0
+
+  const lowRate = Number(config.low_rate) || 0
+  const highRate = Number(config.high_rate) || 0
+  const threshold = Number(config.monthly_threshold) || 0
+
+  if (total >= threshold) {
+    return Math.floor(total * highRate)
+  }
+
+  return Math.floor(total * lowRate)
+}

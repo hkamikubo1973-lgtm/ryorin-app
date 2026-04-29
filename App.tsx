@@ -40,6 +40,7 @@ import DailyMealSummary from './src/components/DailyMealSummary';
 import TodayTimeline from './src/components/TodayTimeline';
 import TodayRecordList from './src/components/TodayRecordList';
 import LogsScreen from './src/components/LogsScreen';
+import SalaryMaster from './src/components/SalaryMaster'
 
 /* ===============================
    🔽 バナー
@@ -75,6 +76,7 @@ function App() {
   const [jumpText, setJumpText] = useState<string | null>(null);
   const [baseDate, setBaseDate] = useState<string | null>(null);
   const [pattern, setPattern] = useState<DutyType[] | null>(null);
+  const [screen, setScreen] = useState<'main' | 'salary'>('main');
 
   /* ===============================
      初期化
@@ -174,81 +176,112 @@ function App() {
       {/* ★ SafeArea内に入れる */}
       <HeaderBanner />
 
+    <View style={{ flexDirection: 'row', justifyContent: 'center', paddingVertical: 6 }}>
+      <Text
+        onPress={() => setScreen('main')}
+        style={{
+          marginRight: 20,
+          color: screen === 'main' ? '#1976D2' : '#999',
+          fontWeight: 'bold'
+        }}
+      >
+        メイン
+      </Text>
+
+      <Text
+        onPress={() => setScreen('salary')}
+        style={{
+          color: screen === 'salary' ? '#1976D2' : '#999',
+          fontWeight: 'bold'
+        }}
+      >
+        給与
+      </Text>
+        </View>
+
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
 
         <ScrollView
-          contentContainerStyle={{ paddingBottom: 16 }}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-        >
+      contentContainerStyle={{ paddingBottom: 16 }}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+    >
 
-          <DutySearchBar
-            uuid={uuid}
-            dutyDate={dutyDate}
-            dutyType={dutyType}
-            jumpText={jumpText}
-            baseDate={baseDate}
-            pattern={pattern}
-            onChange={(newDate, jumpType) => {
-              setDutyDate(newDate);
-              refreshAll();
-              if (jumpType === 'long-next') showJump('＋30');
-              if (jumpType === 'long-prev') showJump('－30');
-            }}
-            onSavePattern={async (newBaseDate, newPattern) => {
-              await saveCycleSettings(uuid, newBaseDate, newPattern, 'cycle');
-              setPattern(newPattern);
-              setBaseDate(newBaseDate);
-            }}
-            onSetOverride={handleOverride}
-            onResetOverride={handleResetOverride}
-          />
+  {screen === 'main' ? (
+    <>
 
-          <DailyMemo uuid={uuid} dutyDate={dutyDate} />
+      <DutySearchBar
+        uuid={uuid}
+        dutyDate={dutyDate}
+        dutyType={dutyType}
+        jumpText={jumpText}
+        baseDate={baseDate}
+        pattern={pattern}
+        onChange={(newDate, jumpType) => {
+          setDutyDate(newDate);
+          refreshAll();
+          if (jumpType === 'long-next') showJump('＋30');
+          if (jumpType === 'long-prev') showJump('－30');
+        }}
+        onSavePattern={async (newBaseDate, newPattern) => {
+          await saveCycleSettings(uuid, newBaseDate, newPattern, 'cycle');
+          setPattern(newPattern);
+          setBaseDate(newBaseDate);
+        }}
+        onSetOverride={handleOverride}
+        onResetOverride={handleResetOverride}
+      />
 
-          <TodayTotal
-            uuid={uuid}
-            dutyDate={dutyDate}
-            refreshKey={refreshKey}
-            onRefresh={refreshAll}
-          />
+      <DailyMemo uuid={uuid} dutyDate={dutyDate} />
 
-          <RecordInputForm
-            uuid={uuid}
-            dutyDate={dutyDate}
-            onSaved={refreshAll}
-          />
+      <TodayTotal
+        uuid={uuid}
+        dutyDate={dutyDate}
+        refreshKey={refreshKey}
+        onRefresh={refreshAll}
+      />
 
-          <MealInputButtons
-            uuid={uuid}
-            dutyDate={dutyDate}
-            onMealRefresh={refreshAll}
-          />
+      <RecordInputForm
+        uuid={uuid}
+        dutyDate={dutyDate}
+        onSaved={refreshAll}
+      />
 
-          <DailyMealSummary
-            uuid={uuid}
-            dutyDate={dutyDate}
-            refreshKey={refreshKey}
-          />
+      <MealInputButtons
+        uuid={uuid}
+        dutyDate={dutyDate}
+        onMealRefresh={refreshAll}
+      />
 
-          <TodayTimeline
-            uuid={uuid}
-            dutyDate={dutyDate}
-            refreshKey={refreshKey}
-          />
+      <DailyMealSummary
+        uuid={uuid}
+        dutyDate={dutyDate}
+        refreshKey={refreshKey}
+      />
 
-          <TodayRecordList
-            uuid={uuid}
-            dutyDate={dutyDate}
-            refreshKey={refreshKey}
-          />
+      <TodayTimeline
+        uuid={uuid}
+        dutyDate={dutyDate}
+        refreshKey={refreshKey}
+      />
 
-          {DEBUG && <LogsScreen />}
+      <TodayRecordList
+        uuid={uuid}
+        dutyDate={dutyDate}
+        refreshKey={refreshKey}
+      />
 
-        </ScrollView>
+      {DEBUG && <LogsScreen />}
+
+    </>
+  ) : (
+    <SalaryMaster uuid={uuid} />
+  )}
+
+</ScrollView>
 
       </KeyboardAvoidingView>
 

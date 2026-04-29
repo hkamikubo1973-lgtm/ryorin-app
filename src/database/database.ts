@@ -486,8 +486,13 @@ export const initDatabase = async () => {
       target_days INTEGER,
       low_rate REAL,
       high_rate REAL,
+      adjustment INTEGER DEFAULT 0,
       created_at TEXT,
       updated_at TEXT
     );
   `);
+
+ // await db.execAsync(`
+ //   ALTER TABLE salary_config ADD COLUMN adjustment INTEGER DEFAULT 0;
+ // `);
   };
