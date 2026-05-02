@@ -1,28 +1,16 @@
 export const calculateDailySalary = (sales: number, config: any) => {
-  const total = Number(sales) || 0
 
+  const total = Number(sales) || 0
+  const threshold = Number(config.monthly_threshold) || 0
   const lowRate = Number(config.low_rate) || 0
   const highRate = Number(config.high_rate) || 0
-  const threshold = Number(config.monthly_threshold) || 0
+  const adjustment = Number(config.adjustment) || 0
 
-  if (total >= threshold) {
-    return Math.floor(total * highRate)
-  }
+  // 足切り部分
+  const base = Math.min(total, threshold) * lowRate
 
-  return Math.floor(total * lowRate)
-}
+  // 超過部分
+  const extra = Math.max(0, total - threshold) * highRate
 
-
-export const calculateMonthlySalary = (sales: number, config: any) => {
-  const total = Number(sales) || 0
-
-  const lowRate = Number(config.low_rate) || 0
-  const highRate = Number(config.high_rate) || 0
-  const threshold = Number(config.monthly_threshold) || 0
-
-  if (total >= threshold) {
-    return Math.floor(total * highRate)
-  }
-
-  return Math.floor(total * lowRate)
+  return Math.floor(base + extra + adjustment)
 }

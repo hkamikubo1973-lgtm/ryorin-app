@@ -21,7 +21,6 @@ import {
 } from '../database/database'
 
 import { getSalaryConfig, saveSalaryConfig } from '../database/salaryConfig'
-import { calculateDailySalary } from '../utils/salaryCalculator';
 import { ActionCard } from './ActionCard'
 import { getTodayActionCard } from '../utils/getTodayActionCard'
 
@@ -124,7 +123,8 @@ export default function TodayTotal({
           monthly_threshold: 360000,
           target_days: 12,
           low_rate: 0.5,
-          high_rate: 0.6
+          high_rate: 0.6,
+          adjustment: 0
         })
         config = await getSalaryConfig(uuid)
       }
@@ -143,11 +143,7 @@ export default function TodayTotal({
   
   const remaining = monthlyTarget - monthTotal
 
-  // ★日次給与
-  const dailySalary = salaryConfig
-    ? calculateDailySalary(todayTotal, salaryConfig)
-    : 0
-
+ 
   /* =====================
      目標変更
   ===================== */
@@ -353,13 +349,7 @@ export default function TodayTotal({
             <Text>貸切：{summary.charter?.toLocaleString()} 円</Text>
             <Text>その他：{summary.other?.toLocaleString()} 円</Text>
 
-          <View style={{ marginTop: 8, borderTopWidth: 1.5, borderColor: '#ccc', paddingTop: 8 }}>
-            <Text style={styles.salaryText}>日次給与（目安）</Text>
-            <Text style={styles.amount}>
-              {dailySalary.toLocaleString()} 円
-            </Text>
-          </View>
-            
+                      
             <Pressable style={styles.reset} onPress={handleReset}>
               <Text style={styles.resetText}>
                 本日の売上をリセット

@@ -1,118 +1,205 @@
 import React, { useEffect, useState } from 'react'
-import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native'
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  StyleSheet,
+} from 'react-native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+
 import { getSalaryConfig, saveSalaryConfig } from '../database/salaryConfig'
+import { getMonthlyTotalSales } from '../database/database'
 
 type Props = {
   uuid: string
 }
 
+const CLOSING_DAY_KEY = 'closingDay'
+
 export default function SalaryMaster({ uuid }: Props) {
+
   const [threshold, setThreshold] = useState('')
   const [lowRate, setLowRate] = useState('')
   const [highRate, setHighRate] = useState('')
   const [adjustment, setAdjustment] = useState('')
+  const [baseSalary, setBaseSalary] = useState('') // ★追加
+
+  const [monthlySales, setMonthlySales] = useState(0)
+  const [monthlySalary, setMonthlySalary] = useState(0)
+  const [avgDaily, setAvgDaily] = useState(0)
+
+  const [sampleSales, setSampleSales] = useState('400000')
 
   useEffect(() => {
-    load()
+    init()
   }, [])
 
-  const load = async () => {
+  const init = async () => {
+
     const config = await getSalaryConfig(uuid)
-    if (config) {
-      setThreshold(String(config.monthly_threshold ?? 0))
-      setLowRate(String(config.low_rate ?? 0))
-      setHighRate(String(config.high_rate ?? 0))
-      setAdjustment(String(config.adjustment ?? 0))
-    }
+    if (!config) return
+
+    setThreshold(String(config.monthly_threshold ?? 0))
+    setLowRate(String(config.low_rate ?? 0))
+    setHighRate(String(config.high_rate ?? 0))
+    setAdjustment(String(config.adjustment ?? 0))
+    setBaseSalary(String(config.base_salary ?? 0)) // ★追加
+
+    const savedClosing = await AsyncStorage.getItem(CLOSING_DAY_KEY)
+    const closingDay = savedClosing ? Number(savedClosing) : 31
+
+    const today = new Date().toISOString().slice(0, 10)
+
+    const sales = await getMonthlyTotalSales(uuid, today, closingDay)
+
+    setMonthlySales(sales)
+
+    const salary = calculateMonthlySalary(sales, config)
+
+    setMonthlySalary(salary)
+
+    const days = config.target_days ?? 12
+    setAvgDaily(days > 0 ? Math.floor(salary / days) : 0)
   }
 
   const handleSave = async () => {
-    await saveSalaryConfig(uuid, {
+
+    const newConfig = {
       monthly_threshold: Number(threshold),
       target_days: 12,
       low_rate: Number(lowRate),
       high_rate: Number(highRate),
       adjustment: Number(adjustment),
-    })
+      base_salary: Number(baseSalary), // ★追加
+    }
+
+    await saveSalaryConfig(uuid, newConfig)
+
     alert('保存しました')
+
+    const salary = calculateMonthlySalary(monthlySales, newConfig)
+
+    setMonthlySalary(salary)
+
+    const days = newConfig.target_days ?? 12
+    setAvgDaily(days > 0 ? Math.floor(salary / days) : 0)
   }
 
   /* =====================
-     ★ 給与シミュレーション
+     計算ロジック（シンプル維持）
   ===================== */
 
-  const avgDaily =
-    Math.floor(
-      (Number(threshold) || 0) * (Number(lowRate) || 0)
-      + (Number(adjustment) || 0)
-    )
+  const calculateMonthlySalary = (sales: number, conf: any) => {
 
-  const monthlySample = avgDaily * 12
+    const threshold = Number(conf.monthly_threshold) || 0
+    const low = Number(conf.low_rate) || 0
+    const high = Number(conf.high_rate) || 0
+    const adj = Number(conf.adjustment) || 0
+    const base = Number(conf.base_salary) || 0 // ★追加
+
+    if (sales <= threshold) {
+      return Math.floor(
+        base +
+        (sales * low) +
+        adj
+      )
+    }
+
+    const over = sales - threshold
+
+    return Math.floor(
+      base +
+      (threshold * low) +
+      (over * high) +
+      adj
+    )
+  }
 
   /* =====================
-     UI
+     シミュ
   ===================== */
 
+  const sampleSalary = calculateMonthlySalary(
+    Number(sampleSales),
+    {
+      monthly_threshold: Number(threshold),
+      low_rate: Number(lowRate),
+      high_rate: Number(highRate),
+      adjustment: Number(adjustment),
+      base_salary: Number(baseSalary), // ★追加
+    }
+  )
+
   return (
+
     <View style={styles.card}>
+
       <Text style={styles.title}>給与マスター</Text>
 
-      <Text>足切り売上</Text>
+      <Text>基本給</Text>
       <TextInput
         style={styles.input}
-        value={threshold}
-        onChangeText={setThreshold}
+        value={baseSalary}
+        onChangeText={setBaseSalary}
         keyboardType="numeric"
       />
+
+      <Text>足切り売上</Text>
+      <TextInput style={styles.input} value={threshold} onChangeText={setThreshold} keyboardType="numeric" />
 
       <Text>低歩合</Text>
-      <TextInput
-        style={styles.input}
-        value={lowRate}
-        onChangeText={setLowRate}
-        keyboardType="numeric"
-      />
+      <TextInput style={styles.input} value={lowRate} onChangeText={setLowRate} keyboardType="numeric" />
 
       <Text>高歩合</Text>
-      <TextInput
-        style={styles.input}
-        value={highRate}
-        onChangeText={setHighRate}
-        keyboardType="numeric"
-      />
+      <TextInput style={styles.input} value={highRate} onChangeText={setHighRate} keyboardType="numeric" />
 
       <Text>調整給</Text>
-      <TextInput
-        style={styles.input}
-        value={adjustment}
-        onChangeText={setAdjustment}
-        keyboardType="numeric"
-      />
+      <TextInput style={styles.input} value={adjustment} onChangeText={setAdjustment} keyboardType="numeric" />
 
       <Pressable style={styles.button} onPress={handleSave}>
         <Text style={{ color: '#fff' }}>保存</Text>
       </Pressable>
 
-      {/* ★ここが今回の完成ポイント */}
+      {/* ===== 実績 ===== */}
+
       <View style={styles.simBox}>
-        <Text style={styles.simTitle}>給与シミュレーション（目安）</Text>
+        <Text style={styles.simTitle}>今月実績</Text>
+
+        <Text style={styles.simText}>
+          売上：{monthlySales.toLocaleString()} 円
+        </Text>
+
+        <Text style={styles.simText}>
+          給与：{monthlySalary.toLocaleString()} 円
+        </Text>
 
         <Text style={styles.simText}>
           平均日次：{avgDaily.toLocaleString()} 円
         </Text>
+      </View>
+
+      {/* ===== シミュ ===== */}
+
+      <View style={styles.simBox}>
+        <Text style={styles.simTitle}>給与シミュレーション</Text>
+
+        <Text>想定売上</Text>
+        <TextInput
+          style={styles.input}
+          value={sampleSales}
+          onChangeText={setSampleSales}
+          keyboardType="numeric"
+        />
 
         <Text style={styles.simText}>
-          想定月収：{monthlySample.toLocaleString()} 円（12日）
+          想定給与：{sampleSalary.toLocaleString()} 円
         </Text>
       </View>
 
     </View>
   )
 }
-
-/* =====================
-   styles
-===================== */
 
 const styles = StyleSheet.create({
   card: {
@@ -140,8 +227,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginTop: 4,
   },
-
-  /* ★追加 */
   simBox: {
     marginTop: 16,
     borderTopWidth: 1,
